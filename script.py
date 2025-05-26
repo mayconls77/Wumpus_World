@@ -13,6 +13,7 @@ class WumpusWorld:
         self.game_over = False
         self.victory = False
         self.score = 0
+        self.last_action = "🎮 Jogo iniciado!"
 
         # Códigos para elementos do mundo
         self.WUMPUS = 1
@@ -102,58 +103,44 @@ class WumpusWorld:
         new_row = self.player_pos[0] + dr
         new_col = self.player_pos[1] + dc
 
-        print(f"Tentando mover de ({self.player_pos[0]}, {self.player_pos[1]}) para ({new_row}, {new_col})")
-        print(f"Direção: {self.directions[self.player_direction]} ({dr}, {dc})")
-
         if not self.is_valid_position(new_row, new_col):
-            print("Você bateu na parede!")
-            input("Pressione Enter para continuar...")
+            self.last_action = "🚫 Bateu na parede!"
             return False
 
         self.player_pos = [new_row, new_col]
         self.score -= 1  # Custo por movimento
 
-        print(f"Movimento realizado! Nova posição: ({self.player_pos[0]}, {self.player_pos[1]})")
-
         # Verifica perigos
         cell = self.world[new_row][new_col]
 
         if cell & self.WUMPUS:
-            print("\n💀 Você foi devorado pelo Wumpus!")
+            self.last_action = "💀 Você foi devorado pelo Wumpus!"
             self.game_over = True
             self.score -= 1000
-            input("Pressione Enter para continuar...")
             return False
 
         if cell & self.PIT:
-            print("\n🕳️ Você caiu em um poço!")
+            self.last_action = "🕳️ Você caiu em um poço!"
             self.game_over = True
             self.score -= 1000
-            input("Pressione Enter para continuar...")
             return False
 
-        input("Pressione Enter para continuar...")
+        self.last_action = f"➡️ Moveu para ({new_row}, {new_col})"
         return True
 
     def turn_left(self):
         """Vira o jogador para a esquerda"""
         if not self.game_over:
-            old_direction = self.directions[self.player_direction]
             self.player_direction = (self.player_direction - 1) % 4
-            new_direction = self.directions[self.player_direction]
-            print(f"Virou à esquerda: {old_direction} → {new_direction}")
+            self.last_action = f"↺ Virou à esquerda → {self.directions[self.player_direction]}"
             self.score -= 1
-            input("Pressione Enter para continuar...")
 
     def turn_right(self):
         """Vira o jogador para a direita"""
         if not self.game_over:
-            old_direction = self.directions[self.player_direction]
             self.player_direction = (self.player_direction + 1) % 4
-            new_direction = self.directions[self.player_direction]
-            print(f"Virou à direita: {old_direction} → {new_direction}")
+            self.last_action = f"↻ Virou à direita → {self.directions[self.player_direction]}"
             self.score -= 1
-            input("Pressione Enter para continuar...")
 
     def grab_gold(self):
         """Pega o ouro se estiver na mesma posição"""
@@ -165,16 +152,16 @@ class WumpusWorld:
             self.has_gold = True
             self.world[row][col] &= ~self.GOLD  # Remove o ouro do mundo
             self.score += 1000
-            print("✨ Você pegou o ouro!")
+            self.last_action = "✨ Pegou o ouro!"
             return True
         else:
-            print("Não há ouro aqui.")
+            self.last_action = "❌ Não há ouro aqui"
             return False
 
     def shoot_arrow(self):
         """Atira uma flecha na direção atual"""
         if not self.has_arrow:
-            print("Você não tem mais flechas!")
+            self.last_action = "❌ Sem flechas!"
             return False
 
         if self.game_over:
@@ -193,11 +180,11 @@ class WumpusWorld:
             col += dc
 
             if not self.is_valid_position(row, col):
-                print("🏹 A flecha voou para fora da caverna...")
+                self.last_action = "🏹 Flecha voou para fora da caverna"
                 return False
 
             if self.world[row][col] & self.WUMPUS:
-                print("🎯 Você acertou o Wumpus! Ele está morto!")
+                self.last_action = "🎯 ACERTOU! Wumpus morto!"
                 self.world[row][col] &= ~self.WUMPUS  # Remove o Wumpus
                 self.score += 500
                 return True
@@ -208,35 +195,35 @@ class WumpusWorld:
         """Sai da caverna (só funciona na posição inicial)"""
         if self.player_pos == [0, 0]:
             if self.has_gold:
-                print("🏆 Parabéns! Você escapou com o ouro!")
+                self.last_action = "🏆 VITÓRIA! Escapou com o ouro!"
                 self.victory = True
                 self.score += 1000
             else:
-                print("🚪 Você saiu da caverna, mas sem o ouro...")
+                self.last_action = "🚪 Saiu sem o ouro..."
             self.game_over = True
             return True
         else:
-            print("Você só pode sair da caverna na posição inicial (0,0)!")
+            self.last_action = "❌ Só pode sair na posição (0,0)!"
             return False
 
     def display_world(self, show_all=False):
         """Exibe o mundo (modo debug mostra tudo)"""
         os.system('cls' if os.name == 'nt' else 'clear')
 
-        print("=== MUNDO WUMPUS ===")
-        print(f"Posição: (linha {self.player_pos[0]}, coluna {self.player_pos[1]})")
-        print(f"Direção: {self.directions[self.player_direction]}")
-        print(f"Pontuação: {self.score}")
-        print(f"Flecha: {'Sim' if self.has_arrow else 'Não'}")
-        print(f"Ouro: {'Sim' if self.has_gold else 'Não'}")
-        print()
+        print("🗺️  MUNDO WUMPUS")
+        print("─" * 40)
 
-        # Mostra indicador de direção
-        direction_arrows = ['↑', '→', '↓', '←']
-        print(f"Jogador olhando para: {direction_arrows[self.player_direction]}")
+        # Status em uma linha compacta
+        status_line = f"Pos:({self.player_pos[0]},{self.player_pos[1]}) | Dir:{self.directions[self.player_direction]} | Score:{self.score} | Flecha:{'✓' if self.has_arrow else '✗'} | Ouro:{'✓' if self.has_gold else '✗'}"
+        print(status_line)
+
+        # Última ação
+        print(f"➤ {self.last_action}")
         print()
 
         # Exibe o tabuleiro com coordenadas
+        direction_arrows = ['↑', '→', '↓', '←']
+
         print("   ", end="")
         for j in range(self.size):
             print(f" {j} ", end="")
@@ -262,6 +249,15 @@ class WumpusWorld:
                     print("❓", end=" ")
             print()
 
+        print()
+
+        # Mostra percepções de forma compacta
+        perceptions = self.get_perceptions()
+        if perceptions:
+            perception_text = " | ".join(perceptions)
+            print(f"👁️  {perception_text}")
+        else:
+            print("👁️  Tudo parece normal...")
         print()
 
         # Mostra percepções
@@ -314,7 +310,7 @@ q - Sair do jogo
         while not self.game_over:
             self.display_world()
 
-            command = input("Digite seu comando: ").lower().strip()
+            command = input("Comando [w/a/d/g/s/c/h/m/q]: ").lower().strip()
 
             if command == 'w':
                 self.move_forward()
@@ -339,14 +335,14 @@ q - Sair do jogo
                 temp.score = self.score
                 temp.has_arrow = self.has_arrow
                 temp.has_gold = self.has_gold
+                temp.last_action = "🔍 Modo debug ativado"
                 temp.display_world(show_all=True)
                 input("Pressione Enter para continuar...")
             elif command == 'q':
-                print("Saindo do jogo...")
+                self.last_action = "👋 Saindo do jogo..."
                 break
             else:
-                print("Comando inválido! Digite 'h' para ver a ajuda.")
-                input("Pressione Enter para continuar...")
+                self.last_action = "❓ Comando inválido! Digite 'h' para ajuda"
 
         # Resultado final
         self.display_world(show_all=True)
@@ -356,6 +352,7 @@ q - Sair do jogo
             print("💀 GAME OVER!")
 
         print(f"Pontuação final: {self.score}")
+        input("Pressione Enter para continuar...")
 
 
 # Função para iniciar o jogo
